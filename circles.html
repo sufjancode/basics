@@ -1,0 +1,156 @@
+<html>
+<style>
+body { background-color: #eee }
+canvas { background-color: #fff; float: left }
+.panel { float: right }
+</style>
+<body>
+<canvas id="canvas" width="600" height="600"></canvas>
+<div class="panel">
+<textarea id="settings" rows="20" cols="50">
+Średnica  Kąt początkowy
+100 0
+</textarea>
+<!--
+131.37123182598305  -1.0474067515195304
+5.18791452975339  1.9617340240859842
+48.762569623479855  2.61522823383005
+15.10613277528143  0.48066386688855367
+23.76709268522775  2.383784677841764
+14.241520693138709  2.5934093547355905
+16.49636522163142  0.7504218281090141
+5.552114409863707  -1.1613681629289696
+4.520518090358448  -0.39203722418229675
+-->
+<br/>
+<button onclick="apply()">Zastosuj</button>
+</div>
+</body>
+<script>
+class Animation
+{
+	constructor(circles)
+	{
+		this.circles = circles;
+		this.ctx = canvas.getContext('2d');
+		this.ctx.imageSmoothingEnabled = false;
+		this.buffer = new OffscreenCanvas(canvas.width, canvas.height);
+		this.bufferCtx = this.buffer.getContext('2d');
+		this.bufferCtx.clearRect(0, 0, canvas.width, canvas.height);
+		this.bufferCtx.imageSmoothingEnabled = false;
+		this.elapsedTime = 0;
+		this.px = 0;
+		this.py = 0;
+		this.active = true;
+	}
+	animate() 
+	{
+		if (this.active)
+		{
+			this.elapsedTime += 0.002;
+			this.draw();
+			setTimeout(this.animate.bind(this), 10);
+		}
+	}
+	draw() 
+	{
+		let ctx = this.ctx;
+		let buffer = this.buffer;
+		let bufferCtx = this.bufferCtx;
+		let x = canvas.width / 2;
+		let y = canvas.height / 2;
+		let hue = (this.elapsedTime * 100) % 360;
+		
+		if (this.elapsedTime < 2)
+		{
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			//ctx.filter = `hue-rotate(${hue}deg)`;
+			ctx.drawImage(buffer, 0, 0);
+			ctx.filter = 'none';
+		}
+		else
+		{
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			ctx.filter = 'hue-rotate(1deg) blur(3px)';
+			ctx.drawImage(buffer, 0, 0);
+			bufferCtx.filter = 'opacity(0.03)';
+			bufferCtx.drawImage(canvas, 0, 0);
+			bufferCtx.filter = 'none';
+			ctx.filter = `hue-rotate(${hue}deg)`;
+			ctx.drawImage(buffer, 0, 0);
+			ctx.filter = 'none';
+		}
+		
+		let i = 0;
+
+		for (let { r, s } of circles) 
+		{
+			let n = Math.floor((i + 2) / 2) * (i % 2 ? -1 : 1);
+			i++;
+			let ciclical = Math.PI * this.elapsedTime * n - Math.PI * 0.5;
+			let tx = x + Math.sin(ciclical + s) * r;
+			let ty = y + Math.cos(ciclical + s) * r;
+			ctx.strokeStyle = "rgba(200, 200, 200, 0.5)";
+			ctx.lineWidth = 3;
+			ctx.beginPath();
+			ctx.arc(x, y, r, 0, 2 * Math.PI);
+			ctx.stroke();
+			ctx.strokeStyle = "#333399";
+			ctx.lineWidth = 2;
+			ctx.beginPath();
+			ctx.moveTo(x, y);
+			ctx.lineTo(tx, ty);
+			ctx.stroke();
+			x = tx;
+			y = ty;
+		}
+
+		if (this.px) 
+		{
+			bufferCtx.strokeStyle = "#ff7777";
+			bufferCtx.fillStyle = "#ff7777";
+			setPixel(bufferCtx, x, y, { r: 255, g: 127, b: 127, a: 255 });
+		}
+
+		this.px = x;
+		this.py = y;
+	}
+}
+
+var animation;
+
+function apply() 
+{
+	if (animation) 
+	{
+		animation.active = false;
+	}
+
+	circles = settings.value.match(/[^\r\n]+/g).splice(1).map(line => line.match(/\S+/g).map(v => parseFloat(v))).map(([r, s]) => ({ r: r, s: s }));
+	animation = new Animation(circles);
+	animation.animate();
+}
+function calculateColor(x, y) 
+{
+	let r = Math.floor((x / canvas.width) * 127);
+	let g = Math.floor((y / canvas.width) * 127);
+	let b = Math.max(127, 256 - ((r + g) / 2))
+	return `rgba(${128 + r}, ${128 + g}, 100, 1)`;
+}
+function setPixel(ctx, x, y, c) 
+{
+    var p = ctx.createImageData(4, 4);
+
+	for (let i = 0; i < 4 * 4; i++) 
+	{
+		p.data[i * 4 + 0] = c.r;
+		p.data[i * 4 + 1] = c.g;
+		p.data[i * 4 + 2] = c.b;
+		p.data[i * 4 + 3] = c.a;
+	}
+
+    ctx.putImageData(p, x, y);
+}
+apply();
+</script>
+</html>
