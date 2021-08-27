@@ -1,1 +1,98 @@
+<style>
+</style>
+<canvas id="canvas" width="800" height="600"></canvas>
+<div id="d"></div>
+<script>
+const N = 100;
+let context = canvas.getContext('2d');
+const translateX = x => (x / canvas.width) * 4 - 2;
+const translateY = y => (y / canvas.height) * 4 - 2;
+const distance = (x, y) => z(x, y, 20);
+function onMouseMove(e)
+{
+    let rect = canvas.getBoundingClientRect()
+    let cx = e.clientX - rect.left;
+    let cy = e.clientY - rect.top;
+    let pa = translateX(cx);
+    let pb = translateY(cy);
+    context.putImageData(image, 0, 0);
+    context.strokeStyle = 'yellow';
+    context.beginPath();
+    context.moveTo(cx, cy);
+    let a = 0;
+    let b = 0;
+    let n = N;
+    while (n--)
+    {
+        let a2 = a * a - b * b + pa;
+        let b2 = b * a + a * b + pb;
+        context.lineTo(cx + a2 * canvas.width / 4, cy + b2 * canvas.height / 4);
+        if (a2 < -1000 || a2 > 1000) break;
+        if (b2 < -1000 || b2 > 1000) break;
+        a = a2;
+        b = b2;
+    }
+    context.stroke();
+}
+function drawMandelbrot(image)
+{
+    let d_max = Number.MIN_VALUE;
+    let d_min = Number.MAX_VALUE;
 
+    for (let y = 0; y < 600; y++) 
+    {
+        for (let x = 0; x < 800; x++) 
+        {
+            let pa = translateX(x);
+            let pb = translateY(y);
+            let a = 0;
+            let b = 0;
+            let n = N;
+            let p = (x + canvas.width * y) * 4;
+            let sum_a = 0;
+            let sum_b = 0;
+            let a_1 = 0;
+            let b_1 = 0;
+            let a_2 = 0;
+            let b_2 = 0;
+            let a_3 = 0;
+            let b_3 = 0;
+            while (n--)
+            {
+                let a2 = a * a - b * b + pa;
+                let b2 = b * a + a * b + pb;
+                a = a2;
+                b = b2;
+                sum_a += a;
+                sum_b += b;
+                a_3 = a_2;
+                b_3 = b_2;
+                a_2 = a_1;
+                b_2 = b_1;
+                a_1 = a;
+                b_1 = b;
+                if (a < -100 || a > 100) break;
+                if (b < -100 || b > 100) break;
+            }
+            if (n >= 0)
+            {
+                let log = Math.log10(1 + (10 / N) * (N - n));
+                image.data[p + 2] = Math.floor(log * 255);
+                image.data[p + 3] = 255;
+            }
+            else
+            {
+                let d_r = Math.sqrt(a_1 * a_1 + b_1 * b_1) * 2;
+                let d_g = Math.sqrt(a_2 * a_2 + b_2 * b_2) * 2;
+                let d_b = Math.sqrt(a_3 * a_3 + b_3 * b_3) * 2;
+                image.data[p + 2] = Math.floor(Math.log2(1 + ((d_r + d_g + d_b) / 3)) * 255);
+                image.data[p + 3] = 255;
+            }
+        }
+    }
+}
+canvas.onmousemove = onMouseMove;
+let image = context.getImageData(0, 0, canvas.width, canvas.height);
+drawMandelbrot(image);
+context.putImageData(image, 0, 0);
+</script>
